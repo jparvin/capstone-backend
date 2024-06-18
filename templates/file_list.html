@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+    <head>
+        <title>File List</title>
+        <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='main.css') }}"
+        />
+    </head>
+    <h1>Upload new File</h1>
+    <form method=post enctype=multipart/form-data>
+      <input class ="upload-banner" type=file name=file>
+      <input type=submit value=Upload>
+    </form>
+    <body>
+        <div class="header">
+            <div class="demo-text">Files</div>
+        </div>
+        <div class="textarea">
+            {% for file in data %}
+                <a href="{{ url_for('download_file', filename=file) }}">{{ file }}</a>
+                <span style="display:inline-block; width: 50px;"></span>
+                <a href="/delete/{{file}}">Delete</a>
+                <br>
+            {% endfor %}
+        </div>
+    </body>
+    <br>
+    <footer>
+        <div class="footer">
+            <div class="footer-text">
+                <a href="/">Back to Chat</a>
+            </div>
+        </div>
+    </footer>
+    
+</html>
