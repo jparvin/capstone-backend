@@ -57,7 +57,7 @@ def upload_file():
             filename = secure_filename(file.filename)
             file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
             upload_doc_to_pinecone(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            return redirect(url_for('download_file', name=filename))
+            return redirect(url_for('download_file', filename=filename))
     return url_for('list_files')
 
 @app.route('/uploads/<filename>')

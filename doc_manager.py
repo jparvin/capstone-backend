@@ -35,7 +35,7 @@ def upload_doc_to_pinecone(filepath:str):
             model="text-embedding-3-small")
         pinecone = get_pinecone(embeddings=embeddings)
         documents = load_file(filepath)
-        pinecone.add_documents(documents, {"namespace": filepath})
+        pinecone.add_documents(documents)
         return "success"
     except Exception as e:
         raise e
