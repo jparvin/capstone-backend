@@ -1,12 +1,7 @@
 from langchain_community.document_loaders import UnstructuredFileLoader, DirectoryLoader
 from langchain_openai import OpenAIEmbeddings
 from vector_store import get_pinecone
-import os
 
-PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
-PINECONE_ENVIRONMENT = "us-east-1"
-PINECONE_INDEX_NAME = os.environ["PINECONE_INDEX_NAME"]
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 def load_file(filepath: str):
     loader = UnstructuredFileLoader(filepath)
@@ -30,10 +25,8 @@ def embed_doc(filepath:str, embeddings: OpenAIEmbeddings):
 
 def upload_doc_to_pinecone(filepath:str):
     try:
-        embeddings = OpenAIEmbeddings(
-            api_key=OPENAI_API_KEY,
-            model="text-embedding-3-small")
-        pinecone = get_pinecone(embeddings=embeddings)
+        
+        pinecone = get_pinecone(namespace="docs")
         documents = load_file(filepath)
         pinecone.add_documents(documents)
         return "success"
@@ -42,10 +35,7 @@ def upload_doc_to_pinecone(filepath:str):
 
 def delete_file_from_pinecone(filepath:str):
     try:
-        embeddings = OpenAIEmbeddings(
-            api_key=OPENAI_API_KEY,
-            model="text-embedding-3-small")
-        pinecone = get_pinecone(embeddings=embeddings)
+        pinecone = get_pinecone(namespace="docs")
         pinecone.delete(namespace=filepath)
         return "success"
     except Exception as e:

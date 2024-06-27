@@ -13,7 +13,7 @@ load_dotenv()
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 def make_chain(
-    conversation_history,
+    user_id, session_id
 ) -> RunnableParallel:
     try:
         MODEL = "gpt-3.5-turbo-0125"
@@ -47,13 +47,9 @@ def make_chain(
         REMEMBER: If there is no relevant information within the context ask a clarifying question.
         
         """
+        pinecone = get_pinecone(namespace=f"{user_id}_{session_id}")
         
-        embeddings = OpenAIEmbeddings(
-            api_key=OPENAI_API_KEY,
-            model="text-embedding-3-small")
-        pinecone = get_pinecone(embeddings)
-        
-        retriever = pinecone.as_retriever(embeddings=embeddings)
+        retriever = pinecone.as_retriever()
         model = ChatOpenAI(temperature=TEMPERATURE, model=MODEL, api_key=OPENAI_API_KEY)
         contextualize_q_prompt = ChatPromptTemplate.from_messages(
         [

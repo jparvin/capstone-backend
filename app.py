@@ -17,10 +17,11 @@ import os
 import openai
 from doc_manager import upload_doc_to_pinecone, delete_file_from_pinecone
 from test_agent import make_chain, format_conversation
+from azure import request_repositories, request_repository_commits, ingest_commit_json
 
 client = openai.OpenAI()
 UPLOAD_FOLDER = 'documents'
-ALLOWED_EXTENSIONS = {'txt', 'doc', 'sql', 'py', 'cs', 'docx'}
+ALLOWED_EXTENSIONS = {'txt', 'doc', 'sql', 'py', 'cs', 'docx', 'pdf'}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -84,36 +85,21 @@ def delete_files():
         delete_file_from_pinecone(os.path.join(app.config['UPLOAD_FOLDER'], file))
     return jsonify(success=True)
 
-@app.route("/stream", methods=["GET"])
-def stream():
-    # You need to extract the user message and chat history from your data structure
-    question = chat_history[-1]["content"]
-    chain = make_chain(chat_history)
-    response = chain.invoke({"input" : question, "chat_history": chat_history})
-    print(response)
-    def generate():
-        try:
-            print(response['answer'])
-            yield f"data: {response['answer']}"
-            
-            # Once the loop is done, append the full message to chat_history
-            chat_history.append({"role": "assistant", "content": response['answer']})
-        except Exception as e:
-            print(e)
-            chat_history.append({"role": "system", "content": "An error occurred. Please try again."})
-            yield f"data: An error occurred. Please try again.\n\n"
-    
-    return Response(stream_with_context(generate()), mimetype="text/event-stream")
-
 @app.route("/generate", methods=["GET"])
 def generate():
     question = chat_history[-1]["content"]
-    chain = make_chain(chat_history)
+    chain = make_chain(1, 1)
     response = chain.invoke({"input" : question, "chat_history": chat_history})
     chat_history.append({"role": "assistant", "content": response['answer']})
     return jsonify({"data" : response['answer']})
 
-
+@app.route("/<user_id>/<session_id>/generate", methods=["POST"])
+def generate_chat(user_id:int, session_id: int):
+    question = request.get_json()["message"]
+    chain = make_chain(user_id, session_id)
+    response = chain.invoke({"input" : question, "chat_history": chat_history})
+    chat_history.append({"role": "assistant", "content": response['answer']})
+    return jsonify({"data" : response['answer']})
 
 
 @app.route("/reset", methods=["POST"])
@@ -121,6 +107,22 @@ def reset_chat():
     global chat_history
     chat_history = [{"role": "system", "content": "You are a helpful assistant."}]
     return jsonify(success=True)
+
+
+@app.route("/repositories/<organization>/<project>", methods=["POST", "GET"])
+def get_repositories(organization:str, project:str):
+    if request.method == "GET":
+        return request_repositories(organization, project, **request.args)
+    if request.method == "POST":
+        return
+
+@app.route("/<user_id>/<session_id>/repositories/<organization>/<project>/<repository>/commits", methods=["GET", "POST"])
+def get_repository_commits(user_id:int, session_id: int, organization:str, project:str, repository:str):
+    if request.method == "GET":
+        return request_repository_commits(organization, project, repository, **request.args)
+    if request.method == "POST":
+        json = request_repository_commits(organization, project, repository, **request.args)
+        return ingest_commit_json(json, session_id, user_id)
 
 if __name__ == '__main__':
     app.run(debug=True)
