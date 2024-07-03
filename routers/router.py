@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile
+import shutil
 from models.request_bodies import ChatBody, UserSession
 from utils.doc_manager import upload_doc_to_pinecone, delete_file_from_pinecone
-from utils.test_agent import make_chain, format_conversation
+from utils.agents.test_agent import make_chain, format_conversation
 from utils import azure
 import openai
 import os
@@ -11,7 +12,7 @@ ALLOWED_EXTENSIONS = {'txt', 'doc', 'sql', 'py', 'cs', 'docx', 'pdf'}
 
 chatRouter =  APIRouter()
 azureRouter=  APIRouter() 
-pineconeRouter =  APIRouter()
+fileRouter =  APIRouter()
 
 
 chat_history = []
@@ -20,13 +21,35 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
+####################
+# Chat With Agents #
+####################
 @chatRouter.post("/generate")
 def generate_chat(body: ChatBody):
     chain = make_chain(body.user_id, body.session_id)
     response = chain.invoke({"input" : body.message, "chat_history": chat_history})
     chat_history.append({"role": "assistant", "content": response['answer']})
     return {"data" : response['answer']}
+
+####################
+# File Management  #
+####################
+@fileRouter.post("/upload")
+def upload_file(file:UploadFile):
+    if file.filename == '':
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    if allowed_file(file.filename.split('.')[-1]):
+        raise HTTPException(status_code=400, detail="File type not allowed")
+    try:
+        filepath = os.path.join(os.getcwd(), "documents", file.filename)
+        with open(filepath, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        docs = upload_doc_to_pinecone(filepath)
+        return {"status": "success", "documents" : docs}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
+
 
 
 
