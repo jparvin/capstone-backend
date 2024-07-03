@@ -1,0 +1,2 @@
+To run in dev:
+fastapi dev app.py

@@ -1,0 +1,8 @@
+CREATE TABLE 'user' (
+    'id' INT NOT NULL AUTO_INCREMENT,
+    'email' VARCHAR(255) NOT NULL,
+    'password' VARCHAR(255) NOT NULL,
+    'AZURE_PERSONAL_ACCESS_TOKEN' VARCHAR(255),
+    PRIMARY KEY ('id'),
+    UNIQUE KEY 'email' ('email')
+) AUTO_INCREMENT=1;
