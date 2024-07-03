@@ -2,14 +2,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 import json
-import os
-from dotenv import load_dotenv
-load_dotenv()
-MODEL = "gpt-3.5-turbo-0125"
-TEMPERATURE = 0.1
-OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
-def parse_prompt(question):
+def parse_prompt(question, model:ChatOpenAI):
 
     template = """
     Given the user question, retrieve which sources of data are relevant to the question. These sources include:
@@ -45,15 +39,9 @@ def parse_prompt(question):
     </question>
     Output:
     """
-    model = ChatOpenAI(temperature=TEMPERATURE, model=MODEL, api_key=OPENAI_API_KEY)
-
     chain = (
         PromptTemplate.from_template(template) | model | StrOutputParser()
     )
     response = chain.invoke({"question": question})
-    print(response)
     response_json = json.loads(response)
-    print(response_json)
     return response_json
-
-parse_prompt("In the OneWarehouseMobile - Warehouse Returns documentation it mentions the need to insert records into an Inventory_Transfer_GL table. This is likely done in a stored procedure slq file. Where would I find the function that does that?")

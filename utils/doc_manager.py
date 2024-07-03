@@ -31,9 +31,9 @@ def embed_doc(filepath:str, embeddings: OpenAIEmbeddings):
     data = load_documentation_file(filepath)
     return embeddings.embed_documents(data)
 
-def upload_doc_to_pinecone(filepath:str):
+def upload_doc_to_pinecone(filepath:str, user_id:int, session_id:int):
     try:
-        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace="docs")
+        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
         documents = load_documentation_file(filepath)
         pinecone.add_documents(documents)
         return documents
