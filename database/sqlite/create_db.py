@@ -51,6 +51,7 @@ CREATE TABLE 'file' (
     'id' INTEGER NOT NULL,
     'filename' TEXT NOT NULL,
     'category' TEXT NOT NULL,
+    PRIMARY KEY ('id'),
     FOREIGN KEY ('session_id') REFERENCES 'session'('id')
 );
 """

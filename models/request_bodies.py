@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from typing import List, Optional
 
 class ChatBody(BaseModel):
@@ -12,19 +12,19 @@ class UserSession(BaseModel):
 
 
 class UserBase(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     AZURE_PERSONAL_ACCESS_TOKEN: Optional[str] = None
 
 class UserCreate(UserBase):
     pass
 
-class UserLogin(UserBase):
-    email: EmailStr
+class UserLogin(BaseModel):
+    email: str
     password: str
 
 class UserUpdate(UserBase):
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     password: Optional[str] = None
     AZURE_PERSONAL_ACCESS_TOKEN: Optional[str] = None
 
@@ -41,6 +41,12 @@ class SessionBase(BaseModel):
     organization: Optional[str] = None
     project: Optional[str] = None
     project_name: Optional[str] = None
+
+class SessionBaseResponse(SessionBase):
+    id: int
+
+    class Config:
+        orm_mode = True
 
 class SessionCreate(SessionBase):
     pass
@@ -134,7 +140,7 @@ class SessionResponse(SessionBase):
 
 class UserLoginResponse(UserBase):
     user: UserResponse
-    session: List[SessionResponse]
+    sessions: List[SessionBaseResponse]
 
     class Config:
         orm_mode = True

@@ -10,14 +10,16 @@ class User(Base):
     password = Column(String, nullable=False)
     AZURE_PERSONAL_ACCESS_TOKEN = Column(String)
     
-    sessions = relationship('Session', back_populates='user')
+    sessions = relationship('SessionModel', back_populates='user')
 
     def update(self, data):
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(self, key, value)
 
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
-class Session(Base):
+class SessionModel(Base):
     __tablename__ = 'session'
 
     id = Column(Integer, primary_key=True, index=True)
@@ -31,6 +33,16 @@ class Session(Base):
     chats = relationship('Chat', back_populates='session')
     repositories = relationship('Repository', back_populates='session')
     files = relationship('File', back_populates='session')
+    
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+    
+    def get_attributes(self):
+        dict = self.to_dict()
+        dict['files'] = self.files()
+        dict['chats'] = self.chats()
+        dict['repositories'] = self.repositories()
+        return dict
 
 class Chat(Base):
     __tablename__ = 'chat'
@@ -40,7 +52,10 @@ class Chat(Base):
     role = Column(Text, nullable=False)
     content = Column(Text, nullable=False)
     
-    session = relationship('Session', back_populates='chats')
+    session = relationship('SessionModel', back_populates='chats')
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class Repository(Base):
@@ -52,7 +67,10 @@ class Repository(Base):
     repository_id = Column(Text, nullable=False)
     url = Column(Text, nullable=False)
     
-    session = relationship('Session', back_populates='repositories')
+    session = relationship('SessionModel', back_populates='repositories')
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
 
 
 class File(Base):
@@ -62,5 +80,9 @@ class File(Base):
     filename = Column(Text, nullable=False)
     path = Column(Text, nullable=False)
     category = Column(Text, nullable=False)
+    session_id = Column(Integer, ForeignKey('session.id'), nullable=False)
 
-    session = relationship('Session', back_populates='repositories')
+    session = relationship('SessionModel', back_populates='files')
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
