@@ -138,8 +138,7 @@ class SessionResponse(SessionBase):
     class Config:
         orm_mode = True
 
-class UserLoginResponse(UserBase):
-    user: UserResponse
+class UserLoginResponse(UserResponse):
     sessions: List[SessionBaseResponse]
 
     class Config:

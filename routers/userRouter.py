@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
-from models.request_bodies import UserCreate, UserUpdate, UserResponse, UserLogin
+from models.request_bodies import UserCreate, UserUpdate, UserResponse, UserLogin, UserLoginResponse
 from models.db_models import User, SessionModel
 from sqlalchemy.orm import Session
 from database.database_connection import session
@@ -14,7 +14,7 @@ def get_db():
 userRouter =  APIRouter()
 
 @userRouter.post("/login")
-def login_user(body: UserLogin, db: Session = Depends(get_db)):
+def login_user(body: UserLogin, db: Session = Depends(get_db)) -> UserLoginResponse:
     user = db.query(User).filter(User.email == body.email).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
