@@ -62,10 +62,20 @@ class ChatBase(BaseModel):
 class ChatCreate(ChatBase):
     pass
 
-class ChatUpdate(ChatBase):
-    session_id: Optional[int] = None
-    role: Optional[str] = None
-    content: Optional[str] = None
+class ChatMetadata(BaseModel):
+    source: str
+    type: str
+
+class ChatContext(BaseModel):
+    id: int = None
+    metadata: ChatMetadata
+    page_content: str
+    type: str
+
+class ChatDocumentationResponse(BaseModel):
+    context: List[ChatContext]
+    question : str
+    answer : str
 
 class ChatResponse(ChatBase):
     id: int

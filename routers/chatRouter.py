@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
-from models.request_bodies import ChatBody
+from models.request_bodies import ChatBody, ChatCreate, ChatResponse
 from utils.retrieve_data import CodeAgent
 from utils.agents.test_agent import make_chain
 from sqlalchemy.orm import Session
