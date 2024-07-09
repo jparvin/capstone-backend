@@ -50,8 +50,9 @@ FILE = """
 CREATE TABLE 'file' (
     'id' INTEGER NOT NULL,
     'filename' TEXT NOT NULL,
-    'path' TEXT NOT NULL,
-    'type' TEXT NOT NULL,
+    'category' TEXT NOT NULL,
+    FOREIGN KEY ('session_id') REFERENCES 'session'('id')
+);
 """
 con = sqlite3.connect('./database/sqlite/chatbot.db')
 cur = con.cursor()

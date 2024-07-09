@@ -1,17 +1,8 @@
-from fastapi import APIRouter, HTTPException, UploadFile, Depends
-import shutil
-from models.request_bodies import ChatBody, UserSession
-from utils.retrieve_data import CodeAgent
-from utils.doc_manager import upload_doc_to_pinecone, delete_file_from_pinecone
-from utils.agents.test_agent import make_chain, format_conversation
-from database.database_connection import session
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Depends
+from models.request_bodies import UserSession
 from utils import azure
 import openai
-import os
-client = openai.OpenAI()
-
-ALLOWED_EXTENSIONS = {'txt', 'doc', 'sql', 'py', 'cs', 'docx', 'pdf'}
+from database.database_connection import session
 
 def get_db():
     try:
@@ -20,52 +11,8 @@ def get_db():
     finally:
         db.close()
 
-chatRouter =  APIRouter()
+client = openai.OpenAI()
 azureRouter=  APIRouter() 
-fileRouter =  APIRouter()
-userRouter =  APIRouter()
-
-chat_history = []
-
-def allowed_file(filename):
-    return '.' in filename and \
-           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-####################
-# Chat With Agents #
-####################
-@chatRouter.post("/generate")
-def generate_chat(body: ChatBody, db: Session = Depends(get_db)):
-    chain = make_chain(body.user_id, body.session_id)
-    response = chain.invoke({"input" : body.message, "chat_history": chat_history})
-    chat_history.append({"role": "assistant", "content": response['answer']})
-    return {"data" : response['answer']}
-
-@chatRouter.post("/complex_generate")
-def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
-    response = CodeAgent(body.user_id, body.session_id).start_chain(body.message)
-    return response
-
-####################
-# File Management  #
-####################
-@fileRouter.post("/upload")
-def upload_file(user_id:int, session_id:int, file:UploadFile, db: Session = Depends(get_db)):
-    if file.filename == '':
-        raise HTTPException(status_code=400, detail="No file uploaded")
-    if allowed_file(file.filename.split('.')[-1]):
-        raise HTTPException(status_code=400, detail="File type not allowed")
-    try:
-        filepath = os.path.join(os.getcwd(), "documents", file.filename)
-        with open(filepath, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-        docs = upload_doc_to_pinecone(filepath, user_id, session_id)
-        return {"status": "success", "documents" : docs}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-
-
 
 ####################
 # AZURE Management #
