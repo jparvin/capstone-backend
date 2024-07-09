@@ -78,7 +78,6 @@ class File(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(Text, nullable=False)
-    path = Column(Text, nullable=False)
     category = Column(Text, nullable=False)
     session_id = Column(Integer, ForeignKey('session.id'), nullable=False)
 

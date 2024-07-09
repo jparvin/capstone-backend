@@ -19,7 +19,7 @@ CREATE TABLE 'session' (
     'project' TEXT,
     'project_name' TEXT,
     PRIMARY KEY ('id'),
-    FOREIGN KEY ('user_id') REFERENCES 'user'('id')
+    FOREIGN KEY ('user_id') REFERENCES 'user'('id') ON DELETE CASCADE
 );
 """
 
@@ -30,7 +30,7 @@ CREATE TABLE 'chat' (
     'role' TEXT NOT NULL,
     'content' TEXT NOT NULL,
     PRIMARY KEY ('id'),
-    FOREIGN KEY ('session_id') REFERENCES 'session'('id')
+    FOREIGN KEY ('session_id') REFERENCES 'session'('id') ON DELETE CASCADE
 );
 """
 
@@ -42,7 +42,7 @@ CREATE TABLE 'repository' (
     'repository_id' TEXT NOT NULL,
     'url' TEXT NOT NULL,
     PRIMARY KEY ('id'),
-    FOREIGN KEY ('session_id') REFERENCES 'session'('id')
+    FOREIGN KEY ('session_id') REFERENCES 'session'('id') ON DELETE CASCADE
 );
 """
 
@@ -51,20 +51,33 @@ CREATE TABLE 'file' (
     'id' INTEGER NOT NULL,
     'filename' TEXT NOT NULL,
     'category' TEXT NOT NULL,
+    'session_id' INTEGER NOT NULL,
     PRIMARY KEY ('id'),
-    FOREIGN KEY ('session_id') REFERENCES 'session'('id')
+    FOREIGN KEY ('session_id') REFERENCES 'session'('id') ON DELETE CASCADE
 );
 """
+
+drop_statements = [
+    "DROP TABLE IF EXISTS file;",
+    "DROP TABLE IF EXISTS repository;",
+    "DROP TABLE IF EXISTS chat;",
+    "DROP TABLE IF EXISTS session;",
+    "DROP TABLE IF EXISTS user;"
+]
 con = sqlite3.connect('./database/sqlite/chatbot.db')
 cur = con.cursor()
 
 # Create tables
 def create():
     try:
+        for statement in drop_statements:
+            cur.execute(statement)
+        con.commit()
         cur.execute(USER)
         cur.execute(SESSION)
         cur.execute(CHAT)
         cur.execute(REPOSITORY)
+        cur.execute(FILE)
         con.commit()
         print("Tables created successfully.")
     except sqlite3.Error as e:
