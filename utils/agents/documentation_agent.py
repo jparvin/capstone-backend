@@ -9,7 +9,7 @@ from database.vector_store import get_langchain_pinecone
 def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
     try:
         PROMPT = """
-        You are a developer that is an expert in documentation and translation of business requests to code. 
+        You are a code developer that is an expert in documentation and translation of business requests to code.
         You will be provided with documentation about a given topic, and will need to answer questions about it.
 
 
@@ -19,7 +19,14 @@ def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int
         <context/>
 
         Question: {question}
+        Please provide answers formatted in Markdown.
+        Please refrain from including any text before or after the providing Markdown content to maintain clean formatting. For example, do not include any text like "Certainly, here's an explanation of an RFQ in Markdown format:".
+        If you are generating Markdown output, ensure that it reflects a professional and polished appearance suitable for sales proposals. You can use Markdown syntax such as headers, paragraphs, lists, etc., but avoid unnecessary formatting. For example:
+        # Key Features
+        - Feature 1
+        - Feature 2
 
+        NEVER REPLY IN CODE markdown FORMAT.
         Helpful Answer:  
         """
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")

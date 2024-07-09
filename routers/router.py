@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, UploadFile
+from fastapi import APIRouter, HTTPException, UploadFile, Depends
 import shutil
 from models.request_bodies import ChatBody, UserSession
 from utils.retrieve_data import CodeAgent
 from utils.doc_manager import upload_doc_to_pinecone, delete_file_from_pinecone
 from utils.agents.test_agent import make_chain, format_conversation
+from database.database_connection import session
+from sqlalchemy.orm import Session
 from utils import azure
 import openai
 import os
@@ -11,10 +13,17 @@ client = openai.OpenAI()
 
 ALLOWED_EXTENSIONS = {'txt', 'doc', 'sql', 'py', 'cs', 'docx', 'pdf'}
 
+def get_db():
+    try:
+        db = session()
+        yield db
+    finally:
+        db.close()
+
 chatRouter =  APIRouter()
 azureRouter=  APIRouter() 
 fileRouter =  APIRouter()
-
+userRouter =  APIRouter()
 
 chat_history = []
 
@@ -26,14 +35,14 @@ def allowed_file(filename):
 # Chat With Agents #
 ####################
 @chatRouter.post("/generate")
-def generate_chat(body: ChatBody):
+def generate_chat(body: ChatBody, db: Session = Depends(get_db)):
     chain = make_chain(body.user_id, body.session_id)
     response = chain.invoke({"input" : body.message, "chat_history": chat_history})
     chat_history.append({"role": "assistant", "content": response['answer']})
     return {"data" : response['answer']}
 
 @chatRouter.post("/complex_generate")
-def generate_chat(body:ChatBody):
+def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
     response = CodeAgent(body.user_id, body.session_id).start_chain(body.message)
     return response
 
@@ -41,7 +50,7 @@ def generate_chat(body:ChatBody):
 # File Management  #
 ####################
 @fileRouter.post("/upload")
-def upload_file(user_id:int, session_id:int, file:UploadFile):
+def upload_file(user_id:int, session_id:int, file:UploadFile, db: Session = Depends(get_db)):
     if file.filename == '':
         raise HTTPException(status_code=400, detail="No file uploaded")
     if allowed_file(file.filename.split('.')[-1]):
@@ -58,7 +67,9 @@ def upload_file(user_id:int, session_id:int, file:UploadFile):
 
 
 
-
+####################
+# AZURE Management #
+####################
 @azureRouter.get("/repositories/{organization}/{project}")
 def get_repositories(organization:str, project:str, 
                      skip:int | None = None, 

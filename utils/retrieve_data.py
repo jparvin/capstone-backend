@@ -25,14 +25,16 @@ class CodeAgent:
         print(response_json)
         responses = []
         for item in response_json:
+            if item['source'] == 'clarification':
+                return {"answer" : item['inquiry']}
             if item['source'] == 'code':
-                print(f"Code source: {item['file']}")
+                print(f"Code source: {item['name']}")
                 responses.append(item)
             elif item['source'] == 'repository':
                 responses.append(item)
                 print(f"Repository source: {item['inquiry']}")
             elif item['source'] == 'documentation':
-                responses.append({"documentation_response" : self.chat_documentation(file=item['file'], inquiry=item['inquiry'])})
+                responses.append({"documentation_response" : self.chat_documentation(file=item['name'], inquiry=item['inquiry'])})
         return responses
         
 
