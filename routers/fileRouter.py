@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, UploadFile, Depends
+from fastapi import APIRouter, HTTPException, UploadFile, Depends, Form, File
 import shutil
 from utils.doc_manager import upload_doc_to_pinecone, delete_file_from_pinecone
 from models.request_bodies import FileCreate, FileUpdate, FileResponse
@@ -26,8 +26,19 @@ def allowed_file(filename):
 ####################
 # File Management  #
 ####################
+async def get_file_metadata(
+    session_id: int = Form(...),
+    user_id: int = Form(...),
+    category: str = Form(...)
+):
+    return FileCreate(session_id=session_id, user_id=user_id, category=category)
+
 @fileRouter.post("/upload")
-def upload_file(body: FileCreate, file:UploadFile, db: Session = Depends(get_db)) -> FileResponse:
+def upload_file(
+    file: UploadFile = File(...),
+    body: FileCreate = Depends(get_file_metadata),
+    db: Session = Depends(get_db)
+    ) -> FileResponse:
     if file.filename == '':
         raise HTTPException(status_code=400, detail="No file uploaded")
     if allowed_file(file.filename.split('.')[-1]):

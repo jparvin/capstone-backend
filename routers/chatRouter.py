@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from models.request_bodies import ChatBody, ChatCreate, ChatResponse
 from models.db_models import Chat
 from utils.retrieve_data import CodeAgent
+from utils.agents.prompt_agent import PromptAgent
 from utils.agents.test_agent import make_chain
 from sqlalchemy.orm import Session
 import openai
@@ -38,5 +39,8 @@ def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse
 
 @chatRouter.post("/complex_generate")
 def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
-    response = CodeAgent(body.user_id, body.session_id).start_chain(body.message)
-    return response
+    try:
+        response = CodeAgent(body.user_id, body.session_id, db=db).start_chain(body.message)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
