@@ -1,4 +1,3 @@
-import os, glob, difflib
 from langchain_openai import ChatOpenAI
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runnable
 from langchain_core.prompts import PromptTemplate
@@ -19,22 +18,11 @@ def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int
         <context/>
 
         Question: {question}
-        Please provide answers formatted in Markdown.
-        Please refrain from including any text before or after the providing Markdown content to maintain clean formatting. For example, do not include any text like "Certainly, here's an explanation of an RFQ in Markdown format:".
-        If you are generating Markdown output, ensure that it reflects a professional and polished appearance suitable for sales proposals. You can use Markdown syntax such as headers, paragraphs, lists, etc., but avoid unnecessary formatting. For example:
-        # Key Features
-        - Feature 1
-        - Feature 2
-
-        NEVER REPLY IN CODE markdown FORMAT.
-        Helpful Answer:  
+        
         """
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
-        doc = get_closest_file_match(filename)
-        print(doc)
-        print(inquiry)
         retriever = pinecone.as_retriever(
-            search_kwargs={'filter': {'source':doc}}
+            search_kwargs={'filter': {'source':filename}}
         )
 
         custom_rag_prompt = PromptTemplate.from_template(PROMPT)
@@ -65,11 +53,3 @@ def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int
     except Exception as e:
         print(e)
         raise e
-
-def get_files_in_directory() -> list[str]:
-    files = glob.glob(os.path.join('./documents', '*'))
-    return [os.path.basename(file) for file in files if os.path.isfile(file)]
-
-def get_closest_file_match(filename:str) -> str:
-    files = get_files_in_directory()
-    return difflib.get_close_matches(filename, files, cutoff=0, n=1)[0]

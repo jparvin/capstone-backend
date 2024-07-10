@@ -68,7 +68,9 @@ class PromptAgent:
         {question}
         </question>
 
-        Please respond in json format, with the following fields for each filename that is relevant to the question:
+        Please respond in json format, with the following fields for each filename that is relevant to the question.
+        Do not add any input before or after the json object. 
+        For example, do not include any text like "Here is the relevant information:".:
         [
             "filename": "filename",
             "inquiry": "question"
@@ -76,14 +78,47 @@ class PromptAgent:
         Output:
         """
         files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'documentation').all()
-        file_names=[file.filename for file in files]
+        file_names="\n".join([file.filename for file in files])
         custom_prompt = PromptTemplate.from_template(template)
-        custom_prompt = custom_prompt.assign(files=",".join(file_names))
         chain = (
             custom_prompt | self.model | StrOutputParser()
         )
 
-        response = chain.invoke({"question": question})
+        response = chain.invoke({"question": question, "files": file_names})
         response_json = json.loads(response)
-        print(response_json)
+        return response_json
+    
+    def parse_prompt_code(self, question:str):
+
+        template = """
+        You are a code developer that is an expert in understanding all languages of code.
+        You will be presented with a question and need to determine if any of the given filenames would be relevant to the question.
+        If the question is general and does not reference a specific filename, you do not need to include any filenames in your response.
+        Here are the files currently uploaded to the system:
+        <files>
+        {files}
+        </files>
+        Here is the user question:
+        <question>
+        {question}
+        </question>
+
+        Please respond in json format, with the following fields for each filename that is relevant to the question.
+        Do not add any input before or after the json object. 
+        For example, do not include any text like "Here is the relevant information:".:
+        [
+            "filename": "filename",
+            "inquiry": "question"
+        ]
+        Output:
+        """
+        files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'code').all()
+        file_names="\n".join([file.filename for file in files])
+        custom_prompt = PromptTemplate.from_template(template)
+        chain = (
+            custom_prompt | self.model | StrOutputParser()
+        )
+
+        response = chain.invoke({"question": question, "files": file_names})
+        response_json = json.loads(response)
         return response_json

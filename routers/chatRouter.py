@@ -39,8 +39,5 @@ def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse
 
 @chatRouter.post("/complex_generate")
 def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
-    try:
-        response = CodeAgent(body.user_id, body.session_id, db=db).start_chain(body.message)
-        return response
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    response = CodeAgent(body.user_id, body.session_id, db=db).start_chain(body.message)
+    return response
