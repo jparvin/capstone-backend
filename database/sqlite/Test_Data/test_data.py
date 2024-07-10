@@ -14,10 +14,10 @@ INSERT INTO session (id, user_id, name, organization, project, project_name) VAL
 CHAT="""
 INSERT INTO chat (id, session_id, role, content) VALUES
 (1, 1, 'user', 'Hello, this is the first chat message in session 1'),
-(2, 1, 'bot', 'Hi there! How can I assist you today?'),
+(2, 1, 'ai', 'Hi there! How can I assist you today?'),
 (3, 1, 'user', 'I need help with my project.'),
 (4, 2, 'user', 'Hello, this is the first chat message in session 2'),
-(5, 2, 'bot', 'Hello! How can I help you with your project in session 2?'),
+(5, 2, 'ai', 'Hello! How can I help you with your project in session 2?'),
 (6, 2, 'user', 'I have some issues with my files.');
 """
 REPOSITORIES="""

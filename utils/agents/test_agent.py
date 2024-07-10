@@ -6,7 +6,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from database.vector_store import get_pinecone
+from database.vector_store import get_langchain_pinecone
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -47,7 +47,7 @@ def make_chain(
         REMEMBER: If there is no relevant information within the context ask a clarifying question.
         
         """
-        pinecone = get_pinecone(namespace=f"{user_id}_{session_id}")
+        pinecone = get_langchain_pinecone(f"{user_id}_{session_id}")
         
         retriever = pinecone.as_retriever()
         model = ChatOpenAI(temperature=TEMPERATURE, model=MODEL, api_key=OPENAI_API_KEY)

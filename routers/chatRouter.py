@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, Depends
 from models.request_bodies import ChatBody, ChatCreate, ChatResponse
+from models.db_models import Chat
 from utils.retrieve_data import CodeAgent
 from utils.agents.test_agent import make_chain
 from sqlalchemy.orm import Session
@@ -15,18 +16,25 @@ def get_db():
         
 client = openai.OpenAI()
 chatRouter =  APIRouter()
-chat_history = []
 
 
 ####################
 # Chat With Agents #
 ####################
 @chatRouter.post("/generate")
-def generate_chat(body: ChatBody, db: Session = Depends(get_db)):
-    chain = make_chain(body.user_id, body.session_id)
-    response = chain.invoke({"input" : body.message, "chat_history": chat_history})
-    chat_history.append({"role": "assistant", "content": response['answer']})
-    return {"data" : response['answer']}
+def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse:
+    try:
+        user_chat = Chat(session_id=body.session_id, role="user", content=body.message)
+        chat_history = db.query(Chat).filter(Chat.session_id == body.session_id).all()
+        chain = make_chain(body.user_id, body.session_id)
+        response = chain.invoke({"input" : body.message, "chat_history": chat_history})
+        ai_chat = Chat(session_id=body.session_id, role="ai", content=response['answer'])
+        db.add(user_chat)
+        db.add(ai_chat)
+        db.commit()
+        return ai_chat
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @chatRouter.post("/complex_generate")
 def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
