@@ -13,6 +13,6 @@ app = FastAPI()
 
 app.include_router(chatRouter, prefix="/chat", tags=["Chat"])
 app.include_router(azureRouter, prefix="/azure", tags=["Azure"])
-app.include_router(fileRouter, prefix="/DB", tags=["Database"])
+app.include_router(fileRouter, prefix="/file", tags=["Files"])
 app.include_router(userRouter, prefix="/user", tags=["Users"])
 app.include_router(sessionRouter, prefix="/session", tags=["Sessions"])

@@ -4,6 +4,21 @@ from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
 from models.db_models import File
 import json
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+from typing import List
+from models.other_models import InquiryFields
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+
+
+class Search(BaseModel):
+    """Search over document queries, code queries and Azure Dev Ops queries"""
+
+    queries: List[InquiryFields] = Field(
+        description="Distinct queries for each type of search.",
+    )
 
 class PromptAgent:
     def __init__(self, model:ChatOpenAI, db:Session, session_id:int, user_id:int) -> None:
@@ -12,9 +27,9 @@ class PromptAgent:
         self.model = model
         self.db = db
 
-    def parse_prompt(self, question:str):
+    def parse_prompt(self, question:str) -> list[InquiryFields]:
 
-        template = """
+        system = """
         Given the user question, retrieve which sources of data are relevant to the question. 
         Do not assume filenames functions or file types, only include them if they are explicitly mentioned in the question.
         You do not have to respond with a source if the question is general and does not reference a specific source.
@@ -27,32 +42,46 @@ class PromptAgent:
         For example, do not include any text like "Here is the relevant information:".
         
         Be creative with the inquiry
-        [
-
-                "source": "code | repository | documentation",
-                "name": "filename | function | repository name",
-                "inquiry": "question"
-            
-        ]
-        If no relevant sources are found, return a clarifying question. In the format:
-        [
-            "source": "clarification",
-            "inquiry": "clarifying question"
-        ]
+        
         Do not assume filenames functions or file types, only include them if they are explicitly mentioned in the question.
         You do not have to respond with a source if the question is general and does not reference a specific source.
+
+        Here are all of the documentation sources you can reference:
+        {documentation_sources}
+
+        Here are all of the code file sources you can reference:
+        {code_sources}
+
         <question>
         {question}
         </question>
+        
         Output:
         """
-        chain = (
-            PromptTemplate.from_template(template) | self.model | StrOutputParser()
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", "{question}")
+            ]
         )
-        response = chain.invoke({"question": question})
-        response_json = json.loads(response)
-        return response_json
+        output_parser = PydanticToolsParser(tools=[Search])
 
+        doc_files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'documentation').all()
+        doc_file_names="\n".join([file.filename for file in doc_files])
+
+        code_files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'code').all()
+        code_file_names="\n".join([file.filename for file in code_files])
+
+        structured_model = self.model.with_structured_output(Search)
+
+        query_analyzer = {"question" : RunnablePassthrough(), "code_sources" : RunnablePassthrough(), "documentation_sources": RunnablePassthrough()} | prompt | structured_model
+
+        response = query_analyzer.invoke({"question": question, "code_sources": code_file_names, "documentation_sources": doc_file_names})
+
+        
+        return response.queries
+
+# Not used but can be used to parse the response from the model later on. Use Parse Prompt instead
     def parse_prompt_documentation(self, question:str):
 
         template = """

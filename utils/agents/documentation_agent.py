@@ -5,7 +5,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 from database.vector_store import get_langchain_pinecone
 
-def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
+async def query_documentation(files:list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
     try:
         PROMPT = """
         You are a code developer that is an expert in documentation and translation of business requests to code.
@@ -22,7 +22,7 @@ def query_documentation(filename:str, inquiry:str, model:ChatOpenAI, user_id:int
         """
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
         retriever = pinecone.as_retriever(
-            search_kwargs={'filter': {'source':filename}}
+            search_kwargs={'filter': {'source':{"$in":files}}}
         )
 
         custom_rag_prompt = PromptTemplate.from_template(PROMPT)

@@ -74,11 +74,11 @@ def get_file_structure(organization:str, project:str, repository:str,
                        directory:str | None = None,
                        file:str | None = None):
     try:
-        response = azure.get_repository_overview(organization, project, repository)
+        response = azure.get_repository_overview(organization, project, repository, directory = directory)
         return response 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 
 @azureRouter.get("/repositories/{organization}/{project}/{repository}/files")
 def get_file(organization:str, project:str, repository:str, scopePath:str ):

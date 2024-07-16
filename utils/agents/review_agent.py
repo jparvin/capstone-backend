@@ -5,7 +5,7 @@ import json
 from models.request_bodies import ChatDocumentationResponse
 
 
-class MasterAgent:
+class ReviewAgent:
     def __init__(self, model: ChatOpenAI) -> None:
         self.model = model
     
@@ -15,6 +15,7 @@ class MasterAgent:
         You have been provided with a list of responses from a code developer and product manager that is an expert in documentation and translation of business requests to code.
         You will need to review the responses and determine if the responses are relevant to the original question asked.
         After reviewing the responses, I want you to answer the original question with all of the relevant information given.
+        
         Here are the responses and sources gathered from the code developer:
         {code_responses}
 

@@ -3,12 +3,12 @@ from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runn
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
-from ...database.vector_store import get_langchain_pinecone
+from database.vector_store import get_langchain_pinecone
 
-def query_code(filename:str, inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
+async def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
     try:
         PROMPT = """
-        You are a code developer that is an expert in {coding_language}. 
+        You are a code developer that is an expert in all coding languages. 
         You will be provided with a given code file, and a question about the file and be expected to answer the questoin.
 
 
@@ -22,7 +22,7 @@ def query_code(filename:str, inquiry:str, model:ChatOpenAI, user_id:int, session
         """
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
         retriever = pinecone.as_retriever(
-            search_kwargs={'filter': {'source':filename}}
+            search_kwargs={'filter': {'source':{"$in":files}}}
         )
 
         custom_rag_prompt = PromptTemplate.from_template(PROMPT)
@@ -45,7 +45,7 @@ def query_code(filename:str, inquiry:str, model:ChatOpenAI, user_id:int, session
         )
 
         rag_chain_with_source = RunnableParallel(
-            {"context": retriever, "coding_language":filename.split('.')[1] ,"question": RunnablePassthrough()}
+            {"context": retriever,"question": RunnablePassthrough()}
         ).assign(answer=rag_chain_from_docs)
 
         answer = rag_chain_with_source.invoke(inquiry)
