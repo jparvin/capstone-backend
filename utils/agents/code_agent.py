@@ -5,7 +5,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 from database.vector_store import get_langchain_pinecone
 
-async def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
+def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
     try:
         PROMPT = """
         You are a code developer that is an expert in all coding languages. 
@@ -21,21 +21,18 @@ async def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:in
         
         """
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
-        retriever = pinecone.as_retriever(
-            search_kwargs={'filter': {'source':{"$in":files}}}
-        )
-
+        if files is None or files.count == 0:
+            retriever = pinecone.as_retriever(
+                search_kwargs={'filter': {'source':{"$in":files}}}
+            )
+        else:
+            retriever = pinecone.as_retriever(
+                search_kwargs={'filter': {'type': "code"}}
+            )
         custom_rag_prompt = PromptTemplate.from_template(PROMPT)
 
         def format_docs(docs):
             return "\n\n".join(doc.page_content for doc in docs)
-        
-        rag_chain = (
-            {"context": retriever | format_docs, "question": RunnablePassthrough()}
-            | custom_rag_prompt
-            | model
-            | StrOutputParser()
-        )
         
         rag_chain_from_docs = (
             RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
@@ -53,3 +50,15 @@ async def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:in
     except Exception as e:
         print(e)
         raise e
+
+def retrieve_code(files: list[str], inquiry:str, user_id:int, session_id:int):
+    pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
+    if files is None or files.count == 0:
+        docs = pinecone.similarity_search(
+            filter={"type": "code"}, query=inquiry
+        )
+    else:
+        docs = pinecone.similarity_search(
+            filter={"source": {"$in": files}}, query=inquiry
+        )
+    return docs

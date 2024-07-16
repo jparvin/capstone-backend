@@ -6,6 +6,7 @@ from utils.agents.test_agent import make_chain
 from sqlalchemy.orm import Session
 import openai
 from database.database_connection import session
+from utils.agents.langgraph import Graph
 
 def get_db():
     try:
@@ -38,10 +39,32 @@ def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse
 
 @chatRouter.post("/complex_generate")
 async def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
-    response = await ChatWithAI(body.user_id, body.session_id, db=db).start_chain(body.message)
+    user_chat = Chat(session_id=body.session_id, role="user", content=body.message)
+    response = ChatWithAI(body.user_id, body.session_id, db=db).start_chain(body.message)
+    ai_chat = Chat(session_id=body.session_id, role="ai", content=response['response'])
+    db.add(user_chat)
+    db.add(ai_chat)
+    db.commit()
+    return ai_chat
+
+@chatRouter.post("/complex_generate_sources")
+async def generate_chat(body:ChatBody, db: Session = Depends(get_db)):
+    user_chat = Chat(session_id=body.session_id, role="user", content=body.message)
+    response = ChatWithAI(body.user_id, body.session_id, db=db).start_chain_only_sources(body.message)
+    ai_chat = Chat(session_id=body.session_id, role="ai", content=response['response'])
+    db.add(user_chat)
+    db.add(ai_chat)
+    print(ai_chat)
+    print(user_chat)
+    db.commit()
     return response
 
 @chatRouter.post("/prompt")
 async def test_prompt(body:ChatBody, db: Session = Depends(get_db)):
-    response = await ChatWithAI(body.user_id, body.session_id, db=db).get_prompts(body.message)
+    response = ChatWithAI(body.user_id, body.session_id, db=db).get_prompts(body.message)
     return response
+
+@chatRouter.post("/test_graph")
+def test_graph(body:ChatBody, db:Session = Depends(get_db)):
+    response = Graph(body.user_id, body.session_id, db).agent_setup()
+    return {"message" : "complete"}
