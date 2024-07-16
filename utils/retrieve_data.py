@@ -59,7 +59,7 @@ class ChatWithAI:
                 )
                 code_sources.append(response)
             elif source == SourceTypes.clarification:
-                return conversation_chat(self.user_id, self.session_id, question, self.model, self.db)
+                return {"response" : conversation_chat(self.user_id, self.session_id, question, self.model, self.db)}
         
         masterAgent = ReviewAgent(self.model)
         response = masterAgent.review_sources(original_question=question, documentation_sources=documentation_sources, code_sources=code_sources)
@@ -93,7 +93,7 @@ class ChatWithAI:
                 )
                 code_responses.append(response)
             elif source == SourceTypes.clarification:
-                return conversation_chat(self.user_id, self.session_id, question, self.model, self.db)
+                return {"response" : conversation_chat(self.user_id, self.session_id, question, self.model, self.db) }
         
         masterAgent = ReviewAgent(self.model)
         response = masterAgent.review_sources_and_prompts(original_question=question, documentation_responses=documentation_responses, code_responses=code_responses)
