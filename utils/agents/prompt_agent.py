@@ -8,7 +8,7 @@ from models.other_models import InquiryFields
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 
-from langchain.memory import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 
 
 class Search(BaseModel):

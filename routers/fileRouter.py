@@ -33,7 +33,7 @@ async def get_file_metadata(
 ):
     return FileCreate(session_id=session_id, user_id=user_id, category=category)
 
-@fileRouter.post("/upload")
+@fileRouter.post("/")
 def upload_file(
     file: UploadFile = File(...),
     body: FileCreate = Depends(get_file_metadata),
@@ -57,17 +57,17 @@ def upload_file(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@fileRouter.get("/get/{file_id}", response_model=FileResponse)
-def get_file(file_id: int, db: Session = Depends(get_db)) -> FileResponse:
+@fileRouter.get("/{file_name}", response_model=FileResponse)
+def get_file(file_name: str, db: Session = Depends(get_db)) -> FileResponse:
     try:
-        db_file = db.query(DbFile).filter(DbFile.id == file_id).first()
+        db_file = db.query(DbFile).filter(DbFile.filename == file_name).first()
         if not db_file:
             raise HTTPException(status_code=404, detail="File not found")
         return db_file
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@fileRouter.patch("/update/{file_id}", response_model=FileResponse)
+@fileRouter.patch("/{file_id}", response_model=FileResponse)
 def update_file(file_id: int, body: FileUpdate, db: Session = Depends(get_db)) -> FileResponse:
     try:
         db_file = db.query(DbFile).filter(DbFile.id == file_id).first()
@@ -81,16 +81,15 @@ def update_file(file_id: int, body: FileUpdate, db: Session = Depends(get_db)) -
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@fileRouter.delete("/delete/{file_id}", response_model=dict)
-def delete_file(file_id: int, db: Session = Depends(get_db)):
-    try:
-        db_file = db.query(DbFile).filter(DbFile.id == file_id).first()
-        db_session = db.query(SessionModel).filter(SessionModel.id == db_file.session_id).first()
-        if not db_file:
-            raise HTTPException(status_code=404, detail="File not found")
-        status=delete_file_from_pinecone(db_file.filename, db_session.user_id, db_file.session_id)
-        db.delete(db_file)
-        db.commit()
-        return {"message": status}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@fileRouter.delete("/{file_name}", response_model=dict)
+def delete_file(file_name: str, db: Session = Depends(get_db)):
+    db_file = db.query(DbFile).filter(DbFile.filename == file_name).all()
+    if db_file.count(DbFile) is 0:
+        raise HTTPException(status_code=404, detail="File not found")
+    db_session = db.query(SessionModel).filter(SessionModel.id == db_file[0].session_id).first()
+    if not db_file:
+        raise HTTPException(status_code=404, detail="File not found")
+    status=delete_file_from_pinecone(file_name, db_session.user_id, db_session.id)
+    db.delete(db_file)
+    db.commit()
+    return {"message": status}

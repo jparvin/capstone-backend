@@ -3,7 +3,7 @@ from langchain_core.runnables import RunnableParallel
 from langchain_core.prompts import ChatPromptTemplate
 from models.db_models import  Chat
 from sqlalchemy.orm import Session
-from langchain.memory import ChatMessageHistory
+from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 
 def conversation_chat(
