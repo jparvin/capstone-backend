@@ -131,7 +131,8 @@ def get_repository_items(organization: str, project: str, repository: str):
             url=f"https://dev.azure.com/{organization}/{project}/_apis/git/repositories/{repository}/items?recursionLevel=full&api-version=7.1-preview.1",
             auth=auth
         ).json()
-def get_repository_overview(organization: str, project: str, repository: str, directory: str = None, file:str = None):
+
+def get_repository_overview(organization: str, project: str, repository: str, directory: str = None):
     try:
           # Ensure the response is converted to JSON
         res = get_repository_items(organization, project, repository)
@@ -169,8 +170,11 @@ def get_repository_overview(organization: str, project: str, repository: str, di
                     folder_mapping[parent_path]['files'].append(file)
                 else:
                     file_structure.append(file)
-
-        return {"status": "success", "folders":folders, "files" : file_structure}
+        if directory:
+            file_structure = [item for item in file_structure if item['path'].startswith(directory)]
+            return {"status": "success", "folders":folders, "files" : file_structure}
+        else:
+            return {"status": "success", "folders":folders}
     except Exception as e:
         return HTTPException(500, detail=str(e))
 
@@ -197,6 +201,7 @@ def make_file_metadata_req(organization, project, repository, scopePath):
         auth=auth
     )
     return res.json()
+
 def get_file_metadata(organization: str, project: str, repository: str, scopePath:str):
     try:
         print(scopePath)

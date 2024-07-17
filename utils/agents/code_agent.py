@@ -5,11 +5,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 from database.vector_store import get_langchain_pinecone
 
-def query_documentation(files:list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
+def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
     try:
         PROMPT = """
-        You are a code developer that is an expert in documentation and translation of business requests to code.
-        You will be provided with documentation about a given topic, and will need to answer questions about it.
+        You are a code developer that is an expert in all coding languages. 
+        You will be provided with a given code file, and a question about the file and be expected to answer the questoin.
 
 
         Anything between the following `context`  html blocks is retrieved from a knowledge bank, not part of the conversation with the user
@@ -27,9 +27,8 @@ def query_documentation(files:list[str], inquiry:str, model:ChatOpenAI, user_id:
             )
         else:
             retriever = pinecone.as_retriever(
-                search_kwargs={'filter': {'type': "documentation"}}
+                search_kwargs={'filter': {'type': "code"}}
             )
-
         custom_rag_prompt = PromptTemplate.from_template(PROMPT)
 
         def format_docs(docs):
@@ -43,7 +42,7 @@ def query_documentation(files:list[str], inquiry:str, model:ChatOpenAI, user_id:
         )
 
         rag_chain_with_source = RunnableParallel(
-            {"context": retriever, "question": RunnablePassthrough()}
+            {"context": retriever,"question": RunnablePassthrough()}
         ).assign(answer=rag_chain_from_docs)
 
         answer = rag_chain_with_source.invoke(inquiry)
@@ -51,12 +50,12 @@ def query_documentation(files:list[str], inquiry:str, model:ChatOpenAI, user_id:
     except Exception as e:
         print(e)
         raise e
-    
-def retrieve_docs(files: list[str], inquiry:str, user_id:int, session_id:int):
+
+def retrieve_code(files: list[str], inquiry:str, user_id:int, session_id:int):
     pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
     if files is None or files.count == 0:
         docs = pinecone.similarity_search(
-            filter={"type": "documentation"}, query=inquiry
+            filter={"type": "code"}, query=inquiry
         )
     else:
         docs = pinecone.similarity_search(

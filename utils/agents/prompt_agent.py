@@ -1,20 +1,73 @@
-from langchain_core.output_parsers import StrOutputParser
-from langchain_core.prompts import PromptTemplate
 from langchain_openai import ChatOpenAI
 from sqlalchemy.orm import Session
-from models.db_models import File
-import json
+from models.db_models import File, Chat
+from langchain_core.pydantic_v1 import BaseModel, Field
+from langchain_core.output_parsers.openai_tools import PydanticToolsParser
+from typing import List
+from models.other_models import InquiryFields
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnablePassthrough
+
+from langchain_community.chat_message_histories import ChatMessageHistory
+
+
+class Search(BaseModel):
+    """Search over document queries, code queries and Azure Dev Ops queries"""
+
+    queries: List[InquiryFields] = Field(
+        description="Distinct queries for each type of search.",
+    )
+
+class QuestionScope(BaseModel):
+    """Determine if more context is needed"""
+
+    scope: bool = Field(
+        description="True or False if more context for the question is needed",
+    )
+
 
 class PromptAgent:
-    def __init__(self, model:ChatOpenAI, db:Session, session_id:int, user_id:int) -> None:
+    def __init__(self, model: ChatOpenAI, db: Session, session_id: int, user_id: int) -> None:
         self.session_id = session_id
         self.user_id = user_id
         self.model = model
         self.db = db
 
-    def parse_prompt(self, question:str):
+    def determine_scope(self, question: str) -> str:
+        CONTEXT_PROMPT = """Given a chat history and the latest user question \
+        which might reference context in the chat history, review if additional sources are needed.
+        Only return true if you can answer the question based on the conversation history and the user question.
+        Return false if more context is needed.
+        Do NOT answer the prompt.
+        Chat History:
+        {chat_history}
 
-        template = """
+        question:
+        {input}
+        """
+        contextualize_q_prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", CONTEXT_PROMPT),
+                ("human", "{input}")
+            ])
+        
+        structured_model = self.model.with_structured_output(QuestionScope)
+        query_analyzer = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | contextualize_q_prompt | structured_model
+
+        conversation_history = self.db.query(Chat).filter(Chat.session_id == self.session_id).all()
+        chat_history= ChatMessageHistory()
+        
+        for chat in conversation_history:
+            if chat.role == "AI":
+                chat_history.add_ai_message(chat.content)
+            else:
+                chat_history.add_user_message(chat.content)        
+        response = query_analyzer.invoke({"input": question, "chat_history": chat_history})
+        return response.scope
+
+    def parse_prompt(self, question:str) -> list[InquiryFields]:
+
+        system = """
         Given the user question, retrieve which sources of data are relevant to the question. 
         Do not assume filenames functions or file types, only include them if they are explicitly mentioned in the question.
         You do not have to respond with a source if the question is general and does not reference a specific source.
@@ -26,64 +79,43 @@ class PromptAgent:
         You should respond in json format, with the following fields you can include multiple of each if necessary, but do not add any input before or after the json object. 
         For example, do not include any text like "Here is the relevant information:".
         
-        Be creative with the inquiry
-        [
-
-                "source": "code | repository | documentation",
-                "name": "filename | function | repository name",
-                "inquiry": "question"
-            
-        ]
-        If no relevant sources are found, return a clarifying question. In the format:
-        [
-            "source": "clarification",
-            "inquiry": "clarifying question"
-        ]
         Do not assume filenames functions or file types, only include them if they are explicitly mentioned in the question.
         You do not have to respond with a source if the question is general and does not reference a specific source.
+
+        Here are all of the documentation sources you can reference:
+        {documentation_sources}
+
+        Here are all of the code file sources you can reference:
+        {code_sources}
+
+        Be creative with the inquiry and make each inquiry unique to the type of source.
+
         <question>
         {question}
         </question>
+        
         Output:
         """
-        chain = (
-            PromptTemplate.from_template(template) | self.model | StrOutputParser()
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("system", system),
+                ("human", "{question}")
+            ]
         )
-        response = chain.invoke({"question": question})
-        response_json = json.loads(response)
-        return response_json
+        output_parser = PydanticToolsParser(tools=[Search])
 
-    def parse_prompt_documentation(self, question:str):
+        doc_files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'documentation').all()
+        doc_file_names="\n".join([file.filename for file in doc_files])
 
-        template = """
-        You are a code developer that is an expert in documentation and translation of business requests to code.
-        You will be presented with a question and need to determine if any of the given filenames would be relevant to the question.
-        If the question is general and does not reference a specific filename, you do not need to include any filenames in your response.
-        Here are the files currently uploaded to the system:
-        <files>
-        {files}
-        </files>
-        Here is the user question:
-        <question>
-        {question}
-        </question>
+        code_files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'code').all()
+        code_file_names="\n".join([file.filename for file in code_files])
 
-        Please respond in json format, with the following fields for each filename that is relevant to the question:
-        [
-            "filename": "filename",
-            "inquiry": "question"
-        ]
-        Output:
-        """
-        files = self.db.query(File).filter(File.session_id == self.session_id and File.category == 'documentation').all()
-        file_names=[file.filename for file in files]
-        custom_prompt = PromptTemplate.from_template(template)
-        custom_prompt = custom_prompt.assign(files=",".join(file_names))
-        chain = (
-            custom_prompt | self.model | StrOutputParser()
-        )
+        structured_model = self.model.with_structured_output(Search)
 
-        response = chain.invoke({"question": question})
-        response_json = json.loads(response)
-        print(response_json)
-        return response_json
+        query_analyzer = {"question" : RunnablePassthrough(), "code_sources" : RunnablePassthrough(), "documentation_sources": RunnablePassthrough()} | prompt | structured_model
+
+        response = query_analyzer.invoke({"question": question, "code_sources": code_file_names, "documentation_sources": doc_file_names})
+
+        
+        return response.queries
+
