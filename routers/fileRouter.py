@@ -33,7 +33,7 @@ async def get_file_metadata(
 ):
     return FileCreate(session_id=session_id, user_id=user_id, category=category)
 
-@fileRouter.post("/")
+@fileRouter.post("/upload")
 def upload_file(
     file: UploadFile = File(...),
     body: FileCreate = Depends(get_file_metadata),

@@ -58,7 +58,11 @@ def delete_file_from_pinecone(file:str, user_id:int, session_id:int):
         ids = []
         for vector in docs["matches"]:
             ids.append(vector["id"])
-        if ids is not []:
+        print(ids)
+        print(ids.__len__())
+        print(docs)
+        
+        if ids.__len__() != 0:
             index.delete(
                 namespace=f"{user_id}_{session_id}",
                 ids=ids,

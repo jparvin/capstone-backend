@@ -7,7 +7,7 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 
 def conversation_chat(
-    user_id: int, session_id:int, question:str,  model:ChatOpenAI, db:Session
+    chat_history: ChatMessageHistory, session_id:int, question:str,  model:ChatOpenAI
 ) -> RunnableParallel:
     try:
 
@@ -36,14 +36,9 @@ def conversation_chat(
                 ("human", "{input}")
             ]
         )   
-        conversation_history = db.query(Chat).filter(Chat.session_id == session_id).all()
-        chat_history= ChatMessageHistory()
+        
         query = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | prompt | model
-        for chat in conversation_history:
-            if chat.role == "AI":
-                chat_history.add_ai_message(chat.content)
-            else:
-                chat_history.add_user_message(chat.content)
+        print(chat_history)
         response = query.invoke({"chat_history": chat_history, "input": question})
         return response.content
     except Exception as e:

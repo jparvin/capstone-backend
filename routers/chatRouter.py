@@ -24,7 +24,6 @@ chatRouter =  APIRouter()
 ####################
 @chatRouter.post("/generate")
 def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse:
-    try:
         user_chat = Chat(session_id=body.session_id, role="user", content=body.message)
         response = ChatWithAI(body.user_id, body.session_id, db=db).start_chain_only_sources(body.message)
         ai_chat = Chat(session_id=body.session_id, role="ai", content=response['response'])
@@ -32,10 +31,6 @@ def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse
         db.add(ai_chat)
         db.commit()
         return ai_chat
-    except HTTPException as e:
-        return e
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
 @chatRouter.post("/prompt")
 async def test_prompt(body:ChatBody, db: Session = Depends(get_db)):

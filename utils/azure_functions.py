@@ -21,13 +21,13 @@ def get_auth(user_id:int, db:Session):
     return HTTPBasicAuth(user.email, user.azure_personal_access_token)
 
 
-def retrieve_file_structure(user_id: int, session_id:int, db: Session):
+def retrieve_file_structure(user_id: int, session_id:int, repository_id:str, db: Session):
     auth = get_auth(user_id, db)
     session = db.query(SessionModel).filter(SessionModel.id == session_id).first()
     if session is None:
         raise HTTPException(status_code=404, detail="Session not found")
     res = requests.get(
-        url=f"https://dev.azure.com/{session.organization}/{session.project}/_apis/git/repositories/{session.repository}/items?api-version=7.1-preview.1",
+        url=f"https://dev.azure.com/{session.organization}/{session.project}/_apis/git/repositories/{repository_id}/items?api-version=7.1-preview.1",
         auth=auth
     )
     return res.json()

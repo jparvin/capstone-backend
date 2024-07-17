@@ -33,7 +33,7 @@ class PromptAgent:
         self.model = model
         self.db = db
 
-    def determine_scope(self, question: str) -> str:
+    def determine_scope(self, chat_history: ChatMessageHistory, question: str) -> str:
         CONTEXT_PROMPT = """Given a chat history and the latest user question \
         which might reference context in the chat history, review if additional sources are needed.
         Only return true if you can answer the question based on the conversation history and the user question.
@@ -52,17 +52,8 @@ class PromptAgent:
             ])
         
         structured_model = self.model.with_structured_output(QuestionScope)
-        query_analyzer = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | contextualize_q_prompt | structured_model
-
-        conversation_history = self.db.query(Chat).filter(Chat.session_id == self.session_id).all()
-        chat_history= ChatMessageHistory()
-        
-        for chat in conversation_history:
-            if chat.role == "AI":
-                chat_history.add_ai_message(chat.content)
-            else:
-                chat_history.add_user_message(chat.content)        
-        response = query_analyzer.invoke({"input": question, "chat_history": chat_history})
+        query_analyzer = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | contextualize_q_prompt | structured_model     
+        response = query_analyzer.invoke({"input": question, "chat_history": chat_history.messages})
         return response.scope
 
     def parse_prompt(self, question:str) -> list[InquiryFields]:

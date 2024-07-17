@@ -10,7 +10,7 @@ class User(Base):
     password = Column(String, nullable=False)
     AZURE_PERSONAL_ACCESS_TOKEN = Column(String)
     
-    sessions = relationship('SessionModel', back_populates='user')
+    sessions = relationship('SessionModel', back_populates='user', cascade='all, delete-orphan')
 
     def update(self, data):
         for key, value in data.model_dump(exclude_unset=True).items():
@@ -30,9 +30,9 @@ class SessionModel(Base):
     project_name = Column(Text)
     
     user = relationship('User', back_populates='sessions')
-    chats = relationship('Chat', back_populates='session')
-    repositories = relationship('Repository', back_populates='session')
-    files = relationship('File', back_populates='session')
+    chats = relationship('Chat', back_populates='session', cascade='all, delete-orphan')
+    repositories = relationship('Repository', back_populates='session', cascade='all, delete-orphan')
+    files = relationship('File', back_populates='session', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}
@@ -79,7 +79,7 @@ class File(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(Text, nullable=False)
     category = Column(Text, nullable=False)
-    session_id = Column(Integer, ForeignKey('session.id'), nullable=False)
+    session_id = Column(Integer, ForeignKey('session.id'),  nullable=False)
 
     session = relationship('SessionModel', back_populates='files')
 
