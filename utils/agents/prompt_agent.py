@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_aws import ChatBedrock
 from sqlalchemy.orm import Session
 from models.db_models import File, Chat
 from langchain_core.pydantic_v1 import BaseModel, Field
@@ -27,7 +27,7 @@ class QuestionScope(BaseModel):
 
 
 class PromptAgent:
-    def __init__(self, model: ChatOpenAI, db: Session, session_id: int, user_id: int) -> None:
+    def __init__(self, model: ChatBedrock, db: Session, session_id: int, user_id: int) -> None:
         self.session_id = session_id
         self.user_id = user_id
         self.model = model
@@ -52,7 +52,8 @@ class PromptAgent:
             ])
         
         structured_model = self.model.with_structured_output(QuestionScope)
-        query_analyzer = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | contextualize_q_prompt | structured_model     
+        query_analyzer = {"input": RunnablePassthrough(), "chat_history": RunnablePassthrough()} | contextualize_q_prompt | structured_model  
+        print(contextualize_q_prompt)   
         response = query_analyzer.invoke({"input": question, "chat_history": chat_history.messages})
         return response.scope
 
@@ -67,19 +68,17 @@ class PromptAgent:
         - repository: an azure dev ops repository or repository. This will include referencing multiple files or directories, or asking a general question about file strucutre.
         - documentation: documentation about program requirements or business logic
 
-        You should respond in json format, with the following fields you can include multiple of each if necessary, but do not add any input before or after the json object. 
-        For example, do not include any text like "Here is the relevant information:".
-        
-        Do not assume filenames functions or file types, only include them if they are explicitly mentioned in the question.
-        You do not have to respond with a source if the question is general and does not reference a specific source.
-
         Here are all of the documentation sources you can reference:
+        <documentation sources>
         {documentation_sources}
+        </documentation sources>
 
         Here are all of the code file sources you can reference:
+        <code sources>
         {code_sources}
-
-        Be creative with the inquiry and make each inquiry unique to the type of source.
+        </code sources>
+        
+        DO NOT RETURN A SOURCE IF IT IS NOT NEEDED FROM THE QUESTION
 
         <question>
         {question}

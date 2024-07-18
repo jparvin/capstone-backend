@@ -26,7 +26,7 @@ chatRouter =  APIRouter()
 def generate_chat(body: ChatBody, db: Session = Depends(get_db)) -> ChatResponse:
         user_chat = Chat(session_id=body.session_id, role="user", content=body.message)
         response = ChatWithAI(body.user_id, body.session_id, db=db).start_chain_only_sources(body.message)
-        ai_chat = Chat(session_id=body.session_id, role="ai", content=response['response'])
+        ai_chat = Chat(session_id=body.session_id, role="bot", content=response['response'])
         db.add(user_chat)
         db.add(ai_chat)
         db.commit()

@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from langchain_aws import ChatBedrock
 from langchain_core.runnables import RunnableParallel
 from langchain_core.prompts import ChatPromptTemplate
 from models.db_models import  Chat
@@ -7,7 +7,7 @@ from langchain_community.chat_message_histories import ChatMessageHistory
 from langchain_core.runnables import RunnablePassthrough
 
 def conversation_chat(
-    chat_history: ChatMessageHistory, session_id:int, question:str,  model:ChatOpenAI
+    chat_history: ChatMessageHistory, session_id:int, question:str,  model:ChatBedrock
 ) -> RunnableParallel:
     try:
 

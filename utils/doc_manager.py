@@ -37,9 +37,7 @@ def upload_doc_to_pinecone(filepath:str, user_id:int, session_id:int, category:s
     try:
         pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
         documents = load_documentation_file(filepath, category)
-        print(documents)
         docs = pinecone.add_documents(documents)
-        print(docs)
         return documents
     except Exception as e:
         raise e
@@ -58,9 +56,6 @@ def delete_file_from_pinecone(file:str, user_id:int, session_id:int):
         ids = []
         for vector in docs["matches"]:
             ids.append(vector["id"])
-        print(ids)
-        print(ids.__len__())
-        print(docs)
         
         if ids.__len__() != 0:
             index.delete(
