@@ -6,7 +6,7 @@ from .agents.simple_agent import conversation_chat
 from .agents.documentation_agent import query_documentation, retrieve_docs
 from .agents.code_agent import query_code, retrieve_code
 from sqlalchemy.orm import Session
-from models.db_models import  Chat
+from models.db_models import  Chat, SessionModel
 from langchain_community.chat_message_histories import ChatMessageHistory
 from models.request_bodies import ChatDocumentationResponse, ChatContext
 from .agents.aws_setup import BedrockLLM
@@ -19,18 +19,23 @@ class ChatWithAI:
         self.user_id = user_id
         self.session_id = session_id
         self.db = db
+        self.namespace = self.get_namespace()
         self.chat_history = self.get_chat_history()
         self.model: ChatBedrock = BedrockLLM.get_bedrock_chat(model_id=MODEL, temperature=TEMPERATURE)
     
     def get_chat_history(self, chat_limit:int = 4) -> ChatMessageHistory:
         chat_history= ChatMessageHistory()
-        conversation_history = self.db.query(Chat).filter(Chat.session_id == self.session_id).order_by(Chat.id.desc()).limit(chat_limit).all()
+        conversation_history = self.db.query(Chat).filter(Chat.session_id == self.session_id).order_by(Chat.id.asc()).limit(chat_limit).all()
         for chat in conversation_history:
             if chat.role == "bot" or chat.role == "AI":
                 chat_history.add_ai_message(chat.content)
             else:
                 chat_history.add_user_message(chat.content)
         return chat_history
+    
+    def get_namespace(self):
+        session = self.db.query(SessionModel).filter(SessionModel.id == self.session_id).first()
+        return session.pinecone
 
     def change_model(self, model:str = MODEL, temp:float = TEMPERATURE):
         self.model = BedrockLLM.get_bedrock_chat(model_id=model, temperature=temp)
@@ -60,16 +65,14 @@ class ChatWithAI:
                 response = retrieve_docs(
                     files, 
                     inquiry, 
-                    self.user_id, 
-                    self.session_id
+                    self.namespace
                 )
                 documentation_sources.append(response)
             elif source == SourceTypes.code:
                 response = retrieve_code(
                     files, 
                     inquiry, 
-                    self.user_id, 
-                    self.session_id
+                    self.namespace
                 )
                 code_sources.append(response)
             elif source == SourceTypes.clarification:
@@ -97,8 +100,7 @@ class ChatWithAI:
                     files, 
                     inquiry, 
                     self.model, 
-                    self.user_id, 
-                    self.session_id
+                    self.namespace
                 )
                 documentation_responses.append(response)
             elif source == SourceTypes.code:
@@ -106,8 +108,7 @@ class ChatWithAI:
                     files, 
                     inquiry, 
                     self.model, 
-                    self.user_id, 
-                    self.session_id
+                    self.namespace
                 )
                 code_responses.append(response)
             elif source == SourceTypes.clarification:

@@ -4,6 +4,7 @@ from models.db_models import SessionModel, File
 from sqlalchemy.orm import Session
 from database.database_connection import session
 from utils.doc_manager import delete_file_from_pinecone
+import uuid
 def get_db():
     try:
         db = session()
@@ -16,7 +17,7 @@ sessionRouter = APIRouter()
 @sessionRouter.post("/create", response_model=SessionResponse)
 def create_session(body: SessionCreate, db: Session = Depends(get_db)) -> SessionResponse:
     try:
-        db_session = SessionModel(**body.model_dump())
+        db_session = SessionModel(**body.model_dump(), pinecone=str(uuid.uuid4()))
         db.add(db_session)
         db.commit()
         db.refresh(db_session)

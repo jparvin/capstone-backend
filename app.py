@@ -7,6 +7,7 @@ from routers.userRouter import userRouter
 from routers.sessionRouter import sessionRouter
 from database.database_connection import engine
 from models.db_models import Base
+from database.sqlite.Test_Data.test_data import load_data
 
 Base.metadata.create_all(bind=engine)
 
@@ -19,6 +20,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.post("/load_data")
+def load_sample_data():
+    load_data()
+    return {"message": "Data loaded successfully"}
 
 app.include_router(chatRouter, prefix="/chat", tags=["Chat"])
 app.include_router(azureRouter, prefix="/azure", tags=["Azure"])

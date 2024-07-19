@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from database.database_connection import Base
+from uuid import uuid4
 
 class User(Base):
     __tablename__ = 'user'
@@ -25,6 +26,7 @@ class SessionModel(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('user.id'), nullable=False)
     name = Column(Text, nullable=False)
+    pinecone = Column(Text, default=str(uuid4()))
     organization = Column(Text)
     project = Column(Text)
     project_name = Column(Text)

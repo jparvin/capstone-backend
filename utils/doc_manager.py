@@ -33,22 +33,22 @@ def embed_doc(filepath:str, embeddings: OpenAIEmbeddings):
     data = load_documentation_file(filepath)
     return embeddings.embed_documents(data)
 
-def upload_doc_to_pinecone(filepath:str, user_id:int, session_id:int, category:str):
+def upload_doc_to_pinecone(filepath:str, namespace:str, category:str):
     try:
-        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
+        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace)
         documents = load_documentation_file(filepath, category)
         docs = pinecone.add_documents(documents)
         return documents
     except Exception as e:
         raise e
 
-def delete_file_from_pinecone(file:str, user_id:int, session_id:int):
+def delete_file_from_pinecone(file:str, namespace:str):
     try:
         pinecone = get_pinecone()
         index = pinecone.Index(PINECONE_INDEX_NAME)
         docs = index.query(
                         vector=[item for item in [0.1] for _ in range(1536)],
-                        namespace=f"{user_id}_{session_id}",
+                        namespace=namespace,
                         filter={"source": file},
                         top_k=1000,
                         include_metadata=True,
@@ -59,7 +59,7 @@ def delete_file_from_pinecone(file:str, user_id:int, session_id:int):
         
         if ids.__len__() != 0:
             index.delete(
-                namespace=f"{user_id}_{session_id}",
+                namespace=namespace,
                 ids=ids,
             )
         return "success"

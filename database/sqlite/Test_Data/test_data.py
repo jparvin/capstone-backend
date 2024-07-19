@@ -34,7 +34,7 @@ INSERT INTO file (id, filename, category, session_id) VALUES
 
 """
 # Create tables
-def create():
+def load_data():
     try:
         cur.execute(USER)
         cur.execute(SESSION)
@@ -47,5 +47,3 @@ def create():
         print(f"An error occurred: {e}")
     finally:
         con.close()
-
-create()
