@@ -1,11 +1,11 @@
-from langchain_openai import ChatOpenAI
+from langchain_aws import ChatBedrock
 from langchain_core.runnables import RunnableParallel, RunnablePassthrough, Runnable
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_pinecone import PineconeVectorStore
 from database.vector_store import get_langchain_pinecone
 
-def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, session_id:int):
+def query_code(files: list[str], inquiry:str, model:ChatBedrock, namespace:str):
     try:
         PROMPT = """
         You are a code developer that is an expert in all coding languages. 
@@ -20,8 +20,8 @@ def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, ses
         Question: {question}
         
         """
-        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
-        if files is None or files.count == 0:
+        pinecone:PineconeVectorStore = get_langchain_pinecone(namespace)
+        if files is None or files.__len__() == 0:
             retriever = pinecone.as_retriever(
                 search_kwargs={'filter': {'source':{"$in":files}}}
             )
@@ -51,9 +51,9 @@ def query_code(files: list[str], inquiry:str, model:ChatOpenAI, user_id:int, ses
         print(e)
         raise e
 
-def retrieve_code(files: list[str], inquiry:str, user_id:int, session_id:int):
-    pinecone:PineconeVectorStore = get_langchain_pinecone(namespace=f"{user_id}_{session_id}")
-    if files is None or files.count == 0:
+def retrieve_code(files: list[str], inquiry:str, namespace:str):
+    pinecone:PineconeVectorStore = get_langchain_pinecone(namespace)
+    if files is None or files.__len__() == 0:
         docs = pinecone.similarity_search(
             filter={"type": "code"}, query=inquiry
         )

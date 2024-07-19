@@ -43,19 +43,20 @@ def upload_file(
         raise HTTPException(status_code=400, detail="No file uploaded")
     if allowed_file(file.filename.split('.')[-1]):
         raise HTTPException(status_code=400, detail="File type not allowed")
-    try:
-        filepath = os.path.join(os.getcwd(), "documents", file.filename)
-        with open(filepath, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-        docs = upload_doc_to_pinecone(filepath, body.user_id, body.session_id, category=body.category)
-        db_file = DbFile(filename=file.filename, category=body.category, session_id=body.session_id)
-        db.add(db_file)
-        db.commit()
-        db.refresh(db_file)
-        os.remove(filepath)
-        return db_file
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    #try:
+    filepath = os.path.join(os.getcwd(), "documents", file.filename)
+    with open(filepath, "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    session = db.query(SessionModel).filter(SessionModel.id == body.session_id).first()
+    docs = upload_doc_to_pinecone(filepath, namespace=session.pinecone, category=body.category)
+    db_file = DbFile(filename=file.filename, category=body.category, session_id=body.session_id)
+    db.add(db_file)
+    db.commit()
+    db.refresh(db_file)
+    os.remove(filepath)
+    return db_file
+    #except Exception as e:
+    #    raise HTTPException(status_code=500, detail=str(e))
 
 @fileRouter.get("/{file_name}", response_model=FileResponse)
 def get_file(file_name: str, db: Session = Depends(get_db)) -> FileResponse:
@@ -89,7 +90,8 @@ def delete_file(file_name: str, db: Session = Depends(get_db)):
     db_session = db.query(SessionModel).filter(SessionModel.id == db_file[0].session_id).first()
     if not db_file:
         raise HTTPException(status_code=404, detail="File not found")
-    status=delete_file_from_pinecone(file_name, db_session.user_id, db_session.id)
+    
+    status=delete_file_from_pinecone(file_name, db_session.pinecone)
     db.delete(db_file)
     db.commit()
     return {"message": status}
