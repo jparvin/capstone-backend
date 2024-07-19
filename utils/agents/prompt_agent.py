@@ -7,7 +7,7 @@ from typing import List
 from models.other_models import InquiryFields
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
-
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import ChatMessageHistory
 
 
@@ -56,6 +56,25 @@ class PromptAgent:
         print(contextualize_q_prompt)   
         response = query_analyzer.invoke({"input": question, "chat_history": chat_history.messages})
         return response.scope
+    
+    def clarify_original_question(self, chat_history: ChatMessageHistory, question: str) -> str:
+        CONTEXT_PROMPT = """Given a chat history and the latest user question \
+        which might reference context in the chat history, formulate a standalone question \
+        which can be understood without the chat history. Do NOT answer the question, \
+        just reformulate it if needed and otherwise return it as is.\
+        Also do not modify the question too much, only provide clarification.
+        DONT add any aditional text, just the clarified question."""
+        contextualize_q_prompt = ChatPromptTemplate.from_messages(
+        [
+            ("system", CONTEXT_PROMPT),
+            MessagesPlaceholder(variable_name="messages"),
+            ("human", "{question}")
+        ]
+        )
+        prompt_chain = contextualize_q_prompt | self.model
+        context_question = prompt_chain.invoke({"question": question, "messages" : chat_history.messages}).content
+        print("Context Question: ", context_question)
+        return context_question
 
     def parse_prompt(self, question:str) -> list[InquiryFields]:
 

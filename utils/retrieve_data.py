@@ -50,8 +50,11 @@ class ChatWithAI:
     
     ## This is the function being used in our generation ##
     def start_chain_only_sources(self, question):
+        print("Original Prompt: ", question)
         promptAgent = PromptAgent(self.change_model(temp=.1), self.db, self.session_id, self.user_id)
-        queries = promptAgent.parse_prompt(question)
+        context_question = promptAgent.clarify_original_question(self.chat_history, question)
+        print("Context Question: ", context_question)
+        queries = promptAgent.parse_prompt(context_question)
         documentation_sources:list[ChatContext] = []
         code_sources:list[ChatContext] = []
         for query in queries:
@@ -62,6 +65,7 @@ class ChatWithAI:
                 f"Inquiry: {inquiry}\n"
                 f"Files: {files}\n")
             if source == SourceTypes.documentation:
+                print("Starting Documentation Retrieval")
                 response = retrieve_docs(
                     files, 
                     inquiry, 
@@ -69,6 +73,7 @@ class ChatWithAI:
                 )
                 documentation_sources.append(response)
             elif source == SourceTypes.code:
+                print("Starting Code Retrieval")
                 response = retrieve_code(
                     files, 
                     inquiry, 
@@ -76,16 +81,20 @@ class ChatWithAI:
                 )
                 code_sources.append(response)
             elif source == SourceTypes.clarification:
+                print("Starting Clarification")
                 return {"response" : conversation_chat(self.chat_history, self.session_id, question, self.model)}
-    
+        print("Starting Review Agent")
         masterAgent = ReviewAgent(self.model)
-        response = masterAgent.review_sources(original_question=question, documentation_sources=documentation_sources, code_sources=code_sources, chat_history=self.chat_history)
+        response = masterAgent.review_sources(original_question=question, context_question=context_question, documentation_sources=documentation_sources, code_sources=code_sources, chat_history=self.chat_history)
         return {"response" : response, "documentation_sources":documentation_sources, "code_sources":code_sources}
         
 
     def start_chain(self, question):
         promptAgent = PromptAgent(self.model, self.db, self.session_id, self.user_id)
-        queries = promptAgent.parse_prompt(question)
+        promptAgent = PromptAgent(self.change_model(temp=.1), self.db, self.session_id, self.user_id)
+        context_question = promptAgent.clarify_original_question(self.chat_history, question)
+        print("Context Question: ", context_question)
+        queries = promptAgent.parse_prompt(context_question)
         documentation_responses:list[ChatDocumentationResponse] = []
         code_responses:list[ChatDocumentationResponse] = []
         for query in queries:
@@ -115,6 +124,6 @@ class ChatWithAI:
                 return {"response" : conversation_chat(self.chat_history, self.session_id, question, self.model) }
         
         masterAgent = ReviewAgent(self.model)
-        response = masterAgent.review_sources_and_prompts(original_question=question, documentation_responses=documentation_responses, code_responses=code_responses)
+        response = masterAgent.review_sources_and_prompts(original_question=question, context_question=context_question, documentation_responses=documentation_responses, code_responses=code_responses)
         return {"response" : response, "documentation_responses" :  documentation_responses, "code_responses" : code_responses}
     
